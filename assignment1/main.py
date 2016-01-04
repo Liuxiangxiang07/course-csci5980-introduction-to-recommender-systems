@@ -3,7 +3,7 @@
 # @Author: Zeyuan Shang
 # @Date:   2016-01-04 13:49:11
 # @Last Modified by:   Zeyuan Shang
-# @Last Modified time: 2016-01-04 14:51:52
+# @Last Modified time: 2016-01-04 14:58:46
 import csv
 
 RATINGS_CSV_FILE = 'ml-latest-small/ratings.csv'
@@ -101,7 +101,7 @@ def top_by_number_of_ratings(ratings, movies):
         title = movies_stats[movieId]
         print mean, movieId, movies_stats[movieId]
 
-def top_by_simple_similarity(ratings, movies, special_movieId):
+def top_by_similarity_simple(ratings, movies, special_movieId):
     print 'TOP MOVIES FOR Jaws 3-D (SIMPLE)'
 
     users_stats = {}
@@ -123,7 +123,46 @@ def top_by_simple_similarity(ratings, movies, special_movieId):
     for movie in movies_cnt:
         if movie == special_movieId:
             continue
-        scores.append((float(movies_cnt[movie]) / movies_cnt[special_movieId], -int(movie)))
+        score = float(movies_cnt[movie]) / movies_cnt[special_movieId]
+        scores.append((score, -int(movie)))
+    scores = sorted(scores, reverse = True)
+
+    for i in xrange(10):
+        movieId = str(-scores[i][1])
+        score = scores[i][0]
+        title = movies_stats[movieId]
+        print score, movieId, movies_stats[movieId]
+
+def top_by_similarity_advance(ratings, movies, special_movieId):
+    print 'TOP MOVIES FOR Jaws 3-D (ADVANCE)'
+
+    users_stats = {}
+    for userId, movieId, rating, timestamp in ratings:
+        if not userId in users_stats:
+            users_stats[userId] = []
+        users_stats[userId].append(movieId)
+    movies_stats = {}
+    for movieId, title, genres in movies:
+        movies_stats[movieId] = title
+
+    movies_cnt = {}
+    no_movies_cnt = {}
+    for userId in users_stats:
+        rated_movies = users_stats[userId]
+        if special_movieId in rated_movies:
+            for movie in rated_movies:
+                movies_cnt[movie] = movies_cnt.get(movie, 0) + 1
+        else:
+            for movie in rated_movies:
+                no_movies_cnt[movie] = no_movies_cnt.get(movie, 0) + 1
+
+    scores = []
+    for movie in movies_cnt:
+        if movie == special_movieId:
+            continue
+        score = float(movies_cnt[movie]) / (1 + movies_cnt[special_movieId])
+        score = score / (1 + float(movies_cnt[special_movieId] - movies_cnt[movie]) / (1 + no_movies_cnt.get(movie, 0)))
+        scores.append((score, -int(movie)))
     scores = sorted(scores, reverse = True)
 
     for i in xrange(10):
@@ -145,7 +184,10 @@ if __name__ == "__main__":
     print
     top_by_number_of_ratings(ratings, movies)
     print
-    top_by_simple_similarity(ratings, movies, '1389')
+    top_by_similarity_simple(ratings, movies, '1389')
+    print 
+    top_by_similarity_advance(ratings, movies, '1389')
+
 
 
 
