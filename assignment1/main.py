@@ -3,7 +3,7 @@
 # @Author: Zeyuan Shang
 # @Date:   2016-01-04 13:49:11
 # @Last Modified by:   Zeyuan Shang
-# @Last Modified time: 2016-01-04 14:11:09
+# @Last Modified time: 2016-01-04 14:24:05
 import csv
 
 RATINGS_CSV_FILE = 'ml-latest-small/ratings.csv'
@@ -39,6 +39,33 @@ def top_by_mean(ratings, movies):
     for i in xrange(10):
         print avg[i][0], avg[i][1], movies_stats[str(avg[i][1])]
 
+def top_by_damped_mean(ratings, movies):
+    print 'TOP MOVIES BY DAMPED MEAN'
+    
+    ratings_stats = {}
+    for userId, movieId, rating, timestamp in ratings:
+        if float(rating) == 5.0:
+            continue
+        if movieId in ratings_stats:
+            cnt, total = ratings_stats[movieId]
+            cnt += 1
+            total += float(rating)
+            ratings_stats[movieId] = (cnt, total)
+        else:
+            ratings_stats[movieId] = (1, float(rating))
+    movies_stats = {}
+    for movieId, title, genres in movies:
+        movies_stats[movieId] = title
+
+    avg = []
+    for movieId in ratings_stats:
+        cnt, total = ratings_stats[movieId]
+        avg.append((total / cnt, int(movieId)))
+    avg = sorted(avg, reverse = True)
+
+    for i in xrange(10):
+        print avg[i][0], avg[i][1], movies_stats[str(avg[i][1])]
+
 if __name__ == "__main__":
     # ratings: userId, movieId, rating, timestamp
     ratings = read_csv_file(RATINGS_CSV_FILE)
@@ -47,6 +74,9 @@ if __name__ == "__main__":
 
     # work
     top_by_mean(ratings, movies)
+    print 
+    top_by_damped_mean(ratings, movies)
+
 
 
 
