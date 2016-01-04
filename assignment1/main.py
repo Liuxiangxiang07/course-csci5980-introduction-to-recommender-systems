@@ -3,7 +3,7 @@
 # @Author: Zeyuan Shang
 # @Date:   2016-01-04 13:49:11
 # @Last Modified by:   Zeyuan Shang
-# @Last Modified time: 2016-01-04 14:28:58
+# @Last Modified time: 2016-01-04 14:51:52
 import csv
 
 RATINGS_CSV_FILE = 'ml-latest-small/ratings.csv'
@@ -37,7 +37,7 @@ def top_by_mean(ratings, movies):
     avg = sorted(avg, reverse = True)
 
     for i in xrange(10):
-        movieId = str(avg[i][1])
+        movieId = str(-avg[i][1])
         mean = avg[i][0]
         title = movies_stats[movieId]
         print mean, movieId, movies_stats[movieId]
@@ -67,7 +67,7 @@ def top_by_damped_mean(ratings, movies):
     avg = sorted(avg, reverse = True)
 
     for i in xrange(10):
-        movieId = str(avg[i][1])
+        movieId = str(-avg[i][1])
         mean = avg[i][0]
         title = movies_stats[movieId]
         print mean, movieId, movies_stats[movieId]
@@ -95,11 +95,42 @@ def top_by_number_of_ratings(ratings, movies):
     avg = sorted(avg, reverse = True)
 
     for i in xrange(10):
-        movieId = str(avg[i][1])
+        movieId = str(-avg[i][1])
         cnt, total = ratings_stats[movieId]
         mean = total / cnt
         title = movies_stats[movieId]
         print mean, movieId, movies_stats[movieId]
+
+def top_by_simple_similarity(ratings, movies, special_movieId):
+    print 'TOP MOVIES FOR Jaws 3-D (SIMPLE)'
+
+    users_stats = {}
+    for userId, movieId, rating, timestamp in ratings:
+        if not userId in users_stats:
+            users_stats[userId] = []
+        users_stats[userId].append(movieId)
+    movies_stats = {}
+    for movieId, title, genres in movies:
+        movies_stats[movieId] = title
+
+    movies_cnt = {}
+    for userId in users_stats:
+        rated_movies = users_stats[userId]
+        if special_movieId in rated_movies:
+            for movie in rated_movies:
+                movies_cnt[movie] = movies_cnt.get(movie, 0) + 1
+    scores = []
+    for movie in movies_cnt:
+        if movie == special_movieId:
+            continue
+        scores.append((float(movies_cnt[movie]) / movies_cnt[special_movieId], -int(movie)))
+    scores = sorted(scores, reverse = True)
+
+    for i in xrange(10):
+        movieId = str(-scores[i][1])
+        score = scores[i][0]
+        title = movies_stats[movieId]
+        print score, movieId, movies_stats[movieId]
 
 if __name__ == "__main__":
     # ratings: userId, movieId, rating, timestamp
@@ -113,6 +144,8 @@ if __name__ == "__main__":
     top_by_damped_mean(ratings, movies)
     print
     top_by_number_of_ratings(ratings, movies)
+    print
+    top_by_simple_similarity(ratings, movies, '1389')
 
 
 
