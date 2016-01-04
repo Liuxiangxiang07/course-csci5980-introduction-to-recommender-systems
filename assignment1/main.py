@@ -3,7 +3,7 @@
 # @Author: Zeyuan Shang
 # @Date:   2016-01-04 13:49:11
 # @Last Modified by:   Zeyuan Shang
-# @Last Modified time: 2016-01-04 14:24:05
+# @Last Modified time: 2016-01-04 14:28:58
 import csv
 
 RATINGS_CSV_FILE = 'ml-latest-small/ratings.csv'
@@ -33,11 +33,14 @@ def top_by_mean(ratings, movies):
     avg = []
     for movieId in ratings_stats:
         cnt, total = ratings_stats[movieId]
-        avg.append((total / cnt, int(movieId)))
+        avg.append((total / cnt, -int(movieId)))
     avg = sorted(avg, reverse = True)
 
     for i in xrange(10):
-        print avg[i][0], avg[i][1], movies_stats[str(avg[i][1])]
+        movieId = str(avg[i][1])
+        mean = avg[i][0]
+        title = movies_stats[movieId]
+        print mean, movieId, movies_stats[movieId]
 
 def top_by_damped_mean(ratings, movies):
     print 'TOP MOVIES BY DAMPED MEAN'
@@ -60,11 +63,43 @@ def top_by_damped_mean(ratings, movies):
     avg = []
     for movieId in ratings_stats:
         cnt, total = ratings_stats[movieId]
-        avg.append((total / cnt, int(movieId)))
+        avg.append((total / cnt, -int(movieId)))
     avg = sorted(avg, reverse = True)
 
     for i in xrange(10):
-        print avg[i][0], avg[i][1], movies_stats[str(avg[i][1])]
+        movieId = str(avg[i][1])
+        mean = avg[i][0]
+        title = movies_stats[movieId]
+        print mean, movieId, movies_stats[movieId]
+
+def top_by_number_of_ratings(ratings, movies):
+    print 'TOP MOVIES BY NUMBER OF RATINGS'
+    
+    ratings_stats = {}
+    for userId, movieId, rating, timestamp in ratings:
+        if movieId in ratings_stats:
+            cnt, total = ratings_stats[movieId]
+            cnt += 1
+            total += float(rating)
+            ratings_stats[movieId] = (cnt, total)
+        else:
+            ratings_stats[movieId] = (1, float(rating))
+    movies_stats = {}
+    for movieId, title, genres in movies:
+        movies_stats[movieId] = title
+
+    avg = []
+    for movieId in ratings_stats:
+        cnt, total = ratings_stats[movieId]
+        avg.append((cnt, -int(movieId)))
+    avg = sorted(avg, reverse = True)
+
+    for i in xrange(10):
+        movieId = str(avg[i][1])
+        cnt, total = ratings_stats[movieId]
+        mean = total / cnt
+        title = movies_stats[movieId]
+        print mean, movieId, movies_stats[movieId]
 
 if __name__ == "__main__":
     # ratings: userId, movieId, rating, timestamp
@@ -76,6 +111,8 @@ if __name__ == "__main__":
     top_by_mean(ratings, movies)
     print 
     top_by_damped_mean(ratings, movies)
+    print
+    top_by_number_of_ratings(ratings, movies)
 
 
 
