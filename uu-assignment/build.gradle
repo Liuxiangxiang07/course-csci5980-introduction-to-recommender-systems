@@ -1,0 +1,52 @@
+apply plugin: 'java'
+
+description = 'Assignment 3: User-User CF'
+ext.lenskitVersion = '3.0-T1'
+
+ext.userList = []
+if (project.hasProperty('userId')) {
+    userList = project.userId.split(/,/)
+}
+
+ext.itemList = []
+if (project.hasProperty('itemIds')) {
+    itemList = project.itemIds.split(/,/)
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    compile "org.grouplens.lenskit:lenskit-core:$lenskitVersion"
+    runtime "org.grouplens.lenskit:lenskit-cli:$lenskitVersion"
+}
+
+task recommend(type: JavaExec, group: 'run') {
+    classpath sourceSets.main.runtimeClasspath
+    main 'org.grouplens.lenskit.cli.Main'
+    args 'recommend'
+    args '-c', file('etc/user-user.groovy')
+    args userList
+}
+
+task predict(type: JavaExec, group: 'run') {
+    classpath sourceSets.main.runtimeClasspath
+    main 'org.grouplens.lenskit.cli.Main'
+    args 'predict'
+    args '-c', file('etc/user-user.groovy')
+    if (userList.size() > 0) {
+        args userList.first()
+        args itemList
+    }
+}
+
+task prepareSubmission(type: Zip, group: 'package') {
+    archiveName = 'uu-submission.zip'
+    from projectDir
+    into 'uu-assignment'
+    include 'src/**'
+    include 'etc/*/'
+    include 'build.gradle'
+}
+
