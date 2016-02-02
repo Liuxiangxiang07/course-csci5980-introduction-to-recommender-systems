@@ -1,6 +1,7 @@
 package edu.umn.cs.recsys.cbf;
 
 import it.unimi.dsi.fastutil.longs.Long2DoubleMap;
+import org.grouplens.lenskit.vectors.MutableSparseVector;
 import org.lenskit.api.Result;
 import org.lenskit.api.ResultMap;
 import org.lenskit.basic.AbstractItemScorer;
@@ -61,17 +62,24 @@ public class TFIDFItemScorer extends AbstractItemScorer {
 
         // Get the user's profile, which is a vector with their preference score for each tag
         Long2DoubleMap userVector = profileBuilder.makeUserProfile(ratings);
+        MutableSparseVector userVectorSv = MutableSparseVector.create(userVector);
 
         for (Long item: items) {
             double score = 0;
             Long2DoubleMap iv = model.getItemVector(item);
+            MutableSparseVector sv = MutableSparseVector.create(iv);
 
-            // TODO Compute the cosine between this item's tag vector and the user's profile vector, and
-            // TODO store it in the double variable score (which will be added to the result set).
+            // Compute the cosine between this item's tag vector and the user's profile vector, and
+            // store it in the double variable score (which will be added to the result set).
             // HINT Take a look at the Vectors class in org.lenskit.util.math.
+            score = userVectorSv.norm() * sv.norm();
+            sv.multiply(userVectorSv);
+            if (score != 0) {
+                score = sv.sum() / score;
+            }
             
-            // TODO And remove this exception to say you've implemented it
-            throw new UnsupportedOperationException("stub implementation");
+            // And remove this exception to say you've implemented it
+            // throw new UnsupportedOperationException("stub implementation");
 
             // Store the results of our score computation
             results.add(Results.create(item, score));

@@ -34,7 +34,6 @@ public class ThresholdUserProfileBuilder implements UserProfileBuilder {
     public Long2DoubleMap makeUserProfile(@Nonnull UserHistory<Rating> history) {
         // Create a new vector over tags to accumulate the user profile
         Long2DoubleOpenHashMap profile = new Long2DoubleOpenHashMap();
-        MutableSparseVector profileSv = MutableSparseVector.create(profile);
 
         // Iterate over the user's ratings to build their profile
         for (Rating r: history) {
@@ -43,13 +42,18 @@ public class ThresholdUserProfileBuilder implements UserProfileBuilder {
             if (r.hasValue() && r.getValue() >= RATING_THRESHOLD) {
                 // Get this item's TF-IDF vector from the model
                 // and add it into the user's profile
-                MutableSparseVector sv = MutableSparseVector.create(model.getItemVector(r.getItemId()));
-                profileSv.add(sv);
+                for (Map.Entry<Long, Double> entry : model.getItemVector(r.getItemId()).entrySet()) {
+                    Double newValue = entry.getValue();
+                    if (profile.containsKey(entry.getKey())) {
+                        newValue += profile.get(entry.getKey());
+                    }
+                    profile.put(entry.getKey(), newValue);
+                }
             }
         }
 
         // The profile is accumulated, return it.
         // It is good practice to return a frozen vector.
-        return LongUtils.frozenMap(profileSv.asMap());
+        return LongUtils.frozenMap(profile);
     }
 }
