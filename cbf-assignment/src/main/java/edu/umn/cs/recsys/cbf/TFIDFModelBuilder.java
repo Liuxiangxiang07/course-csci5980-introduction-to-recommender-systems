@@ -4,6 +4,7 @@ import com.google.common.collect.Maps;
 import it.unimi.dsi.fastutil.longs.Long2DoubleMap;
 import it.unimi.dsi.fastutil.longs.Long2DoubleOpenHashMap;
 import it.unimi.dsi.fastutil.longs.LongSet;
+import org.grouplens.lenskit.vectors.MutableSparseVector;
 import org.lenskit.data.dao.ItemDAO;
 import org.lenskit.inject.Transient;
 import edu.umn.cs.recsys.dao.ItemTagDAO;
@@ -13,6 +14,7 @@ import org.lenskit.util.math.Vectors;
 import javax.inject.Inject;
 import javax.inject.Provider;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -70,9 +72,25 @@ public class TFIDFModelBuilder implements Provider<TFIDFModel> {
             // Create a work vector to accumulate this item's tag vector.
             Long2DoubleMap work = new Long2DoubleOpenHashMap();
 
-            // TODO Populate the work vector with the number of times each tag is applied to this item.
-            
-            // TODO Increment the document frequency vector once for each unique tag on the item.
+            // Populate the work vector with the number of times each tag is applied to this item.
+            // Increment the document frequency vector once for each unique tag on the item.
+            Set<String> seenTags = new HashSet<String>();
+            for (String tag : itemTagDAO.getItemTags(item)) {
+                Long tagId = tagIds.get(tag);
+                Double newValue = 1.;
+                if (work.containsKey(tagId)) {
+                    newValue += work.get(tagId);
+                }
+                work.put(tagId, newValue);
+                if (!seenTags.contains(tag)) {
+                    seenTags.add(tag);
+                    Double newFreq = 1.;
+                    if (docFreq.containsKey(tagId)) {
+                        newFreq += docFreq.get(tagId);
+                    }
+                    docFreq.put(tagId, newFreq);
+                }
+            }
 
             // Save the vector in our map, we'll add IDF and normalize later.
             itemVectors.put(item, work);
@@ -90,16 +108,20 @@ public class TFIDFModelBuilder implements Provider<TFIDFModel> {
         // So we can use it to apply IDF to each item vector to put it in the final model.
         // Create a map to store the final model data.
         Map<Long,Long2DoubleMap> modelData = new HashMap<>();
+        MutableSparseVector docFreqSv = MutableSparseVector.create(docFreq);
         for (Map.Entry<Long,Long2DoubleMap> entry: itemVectors.entrySet()) {
             Long2DoubleMap tv = new Long2DoubleOpenHashMap(entry.getValue());
+            MutableSparseVector sv = MutableSparseVector.create(tv);
 
-            // TODO Convert this TF vector into a TF-IDF vector
+            // Convert this TF vector into a TF-IDF vector
+            sv.multiply(docFreqSv);
 
-            // TODO Normalize the TF-IDF vector to be a unit vector
+            // Normalize the TF-IDF vector to be a unit vector
             // HINT Take a look at the Vectors class in org.lenskit.util.math.
-            
+            sv.multiply(1.0 / sv.norm());
+
             // Store a frozen (immutable) version of the vector in the model data.
-            modelData.put(entry.getKey(), LongUtils.frozenMap(tv));
+            modelData.put(entry.getKey(), LongUtils.frozenMap(sv.asMap()));
         }
 
         return new TFIDFModel(tagIds, modelData);
