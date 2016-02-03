@@ -2,6 +2,7 @@ package edu.umn.cs.recsys;
 
 import com.google.common.collect.Sets;
 import edu.umn.cs.recsys.dao.ItemTagDAO;
+import it.unimi.dsi.fastutil.longs.Long2DoubleMap;
 import it.unimi.dsi.fastutil.longs.Long2DoubleOpenHashMap;
 import org.lenskit.LenskitRecommender;
 import org.lenskit.api.Recommender;
@@ -18,6 +19,8 @@ import org.lenskit.util.math.Vectors;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -57,7 +60,31 @@ public class TagEntropyMetric extends TopNMetric<TagEntropyMetric.Context> {
 
         double entropy = 0;
         
-        // TODO Implement tag entropy metric
+        // Implement tag entropy metric
+        // Calculate probabilities
+        Long2DoubleMap probability = new Long2DoubleOpenHashMap();
+        for (Long item : recommendations.idList()) {
+            List<String> tags = tagDAO.getItemTags(item);
+            Set<String> seenTags = new HashSet<String>();
+            for (String tag : tags) {
+                seenTags.add(tag);
+            }
+            int m = seenTags.size();
+            for (String tag : seenTags) {
+                Long tagId = vocab.getTagId(tag);
+                Double newValue = 1.0 / (m * n);
+                if (probability.containsKey(tagId)) {
+                    newValue += probability.get(tagId);
+                }
+                probability.put(tagId, newValue);
+            }
+        }
+
+        // Calculate entropy
+        for (Map.Entry<Long, Double> e : probability.entrySet()) {
+            double p = e.getValue();
+            entropy -= p * Math.log(p) / Math.log(2);
+        }
         
         // record the entropy in the context for aggregation
         context.addUser(entropy);
