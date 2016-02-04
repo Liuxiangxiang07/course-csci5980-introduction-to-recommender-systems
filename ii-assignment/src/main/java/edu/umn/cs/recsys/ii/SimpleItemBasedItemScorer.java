@@ -1,5 +1,6 @@
 package edu.umn.cs.recsys.ii;
 
+import it.unimi.dsi.fastutil.longs.Long2DoubleMap;
 import it.unimi.dsi.fastutil.longs.Long2DoubleOpenHashMap;
 import org.lenskit.api.Result;
 import org.lenskit.api.ResultMap;
@@ -38,13 +39,21 @@ public class SimpleItemBasedItemScorer extends AbstractItemBasedItemScorer {
     public ResultMap scoreRelatedItemsWithDetails(@Nonnull Collection<Long> basket, Collection<Long> items) {
         Long2DoubleOpenHashMap scores = new Long2DoubleOpenHashMap();
 
-        // TODO: Store your scores for the target items in the scores object.
+        // Store your scores for the target items in the scores object.
+        for (Long item : items) {
+            Long2DoubleMap neighborhoods = model.getNeighbors(item);
+            Double score = 0.;
+            for (Long referenced_item : basket) {
+                score += neighborhoods.get(referenced_item);
+            }
+            scores.put(item, score);
+        }
         
         List<Result> results = new ArrayList<>();
         for (Map.Entry<Long, Double> entry : scores.entrySet()) {
-            // TODO: Add each of the scores to the results list as a Result object
+            // Add each of the scores to the results list as a Result object
             // HINT: results.add(Results.create(item, score));
-            
+            results.add(Results.create(entry.getKey(), entry.getValue()));
         }
         return Results.newResultMap(results);
 
