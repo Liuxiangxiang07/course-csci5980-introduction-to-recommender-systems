@@ -2,6 +2,7 @@ package edu.umn.cs.recsys.ii;
 
 import it.unimi.dsi.fastutil.longs.Long2DoubleMap;
 import it.unimi.dsi.fastutil.longs.Long2DoubleOpenHashMap;
+import org.grouplens.lenskit.scored.ScoredId;
 import org.grouplens.lenskit.util.ScoredItemAccumulator;
 import org.grouplens.lenskit.util.TopNScoredItemAccumulator;
 import org.lenskit.api.Result;
@@ -48,24 +49,41 @@ public class SimpleItemItemScorer extends AbstractItemScorer {
         Long2DoubleMap itemMeans = model.getItemMeans();
         Long2DoubleMap ratings = getUserRatingVector(user);
         
-        // TODO: Normalize the user's ratings by subtracting the item mean.
+        // Normalize the user's ratings by subtracting the item mean.
+        for (Map.Entry<Long, Double> e : ratings.entrySet()) {
+            e.setValue(e.getValue() - itemMeans.get(e.getKey()));
+        }
 
         Long2DoubleMap scores = new Long2DoubleOpenHashMap();
 
-        for (Long item: items ) {
+        for (Long item: items) {
             Long2DoubleMap allNeighbors = model.getNeighbors(item);
             
-            // TODO: Score this item and save the score into scores.
+            // Score this item and save the score into scores.
             // HINT: You might want to use the TopNScoredItemAccumulator class.
-            
+            TopNScoredItemAccumulator topNScoredItemAccumulator = new TopNScoredItemAccumulator(neighborhoodSize);
+            for (Map.Entry<Long, Double> e : allNeighbors.entrySet()) {
+                if (ratings.containsKey(e.getKey())) {
+                    topNScoredItemAccumulator.put(e.getKey(), e.getValue());
+                }
+            }
+            Double score = 0.;
+            double denom = 0;
+            for (ScoredId neighbor : topNScoredItemAccumulator.finish()) {
+                score += ratings.get(neighbor.getId()) * neighbor.getScore();
+                denom += Math.abs(neighbor.getScore());
+            }
+            score /= denom;
+            score += itemMeans.get(item);
+            scores.put(item, score);
         }
 
         List<Result> results = new ArrayList<>();
         for (Map.Entry<Long, Double> entry : scores.entrySet()) {
-            // TODO: Add each of the scores to the results list as a Result object
+            // Add each of the scores to the results list as a Result object
             // HINT: Don't forget to add the item mean back into the score.
             // HINT: results.add(Results.create(item, score));
-            
+            results.add(Results.create(entry.getKey(), entry.getValue()));
         }
         return Results.newResultMap(results);
 
