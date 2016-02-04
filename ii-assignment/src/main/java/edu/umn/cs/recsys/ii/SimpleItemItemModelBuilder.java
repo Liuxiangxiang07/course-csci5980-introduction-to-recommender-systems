@@ -4,6 +4,9 @@ import com.google.common.collect.Maps;
 import it.unimi.dsi.fastutil.longs.Long2DoubleMap;
 import it.unimi.dsi.fastutil.longs.Long2DoubleOpenHashMap;
 import it.unimi.dsi.fastutil.longs.LongSortedSet;
+import org.grouplens.lenskit.vectors.ImmutableSparseVector;
+import org.grouplens.lenskit.vectors.MutableSparseVector;
+import org.grouplens.lenskit.vectors.similarity.CosineVectorSimilarity;
 import org.lenskit.util.collections.LongUtils;
 import org.lenskit.inject.Transient;
 import org.lenskit.data.dao.ItemDAO;
@@ -45,9 +48,16 @@ public class SimpleItemItemModelBuilder implements Provider<SimpleItemItemModel>
         try {
             for (ItemEventCollection<Rating> item: stream) {
                 Long2DoubleOpenHashMap ratings = new Long2DoubleOpenHashMap(Ratings.itemRatingVector(item));
-                
-                // TODO: Store the item's mean rating in itemMeans
-                // TODO: Normalize the item vector before putting it in itemVectors
+                MutableSparseVector ratingsSv = MutableSparseVector.create(ratings);
+
+                // Store the item's mean rating in itemMeans
+                double mean = ratingsSv.mean();
+                itemMeans.put(item.getItemId(), mean);
+
+                // Normalize the item vector before putting it in itemVectors
+                for (Map.Entry<Long, Double> e : ratings.entrySet()) {
+                    e.setValue(e.getValue() - mean);
+                }
 
                 itemVectors.put(item.getItemId(), LongUtils.frozenMap(ratings));
             }
@@ -62,10 +72,19 @@ public class SimpleItemItemModelBuilder implements Provider<SimpleItemItemModel>
         for (long i: itemVectors.keySet()) {
             itemSimilarities.put(i, new Long2DoubleOpenHashMap());
         }
-        
-        // TODO: Compute similarities between each pair of items and
+
+        // Compute similarities between each pair of items and
         // store those values in itemSimilarities object.
         // HINT: itemSimilarities.get(i1).put(i2, sim);
+        CosineVectorSimilarity cosineVectorSimilarity = new CosineVectorSimilarity();
+        for (long i1 : itemVectors.keySet()) {
+            ImmutableSparseVector v1 = ImmutableSparseVector.create(itemVectors.get(i1));
+            for (long i2 : itemVectors.keySet()) {
+                ImmutableSparseVector v2 = ImmutableSparseVector.create(itemVectors.get(i2));
+                double sim = cosineVectorSimilarity.similarity(v1, v2);
+                itemSimilarities.get(i1).put(i2, sim);
+            }
+        }
 
         return new SimpleItemItemModel(LongUtils.frozenMap(itemMeans), itemSimilarities);
     }
