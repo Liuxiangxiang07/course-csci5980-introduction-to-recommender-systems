@@ -3,6 +3,7 @@ package edu.umn.cs.recsys.svd;
 import it.unimi.dsi.fastutil.longs.Long2DoubleMap;
 import it.unimi.dsi.fastutil.longs.Long2DoubleOpenHashMap;
 import org.apache.commons.math3.linear.MatrixUtils;
+import org.apache.commons.math3.linear.RealMatrix;
 import org.apache.commons.math3.linear.RealVector;
 import org.lenskit.api.ItemScorer;
 import org.lenskit.api.Result;
@@ -64,12 +65,13 @@ public class SVDItemScorer extends AbstractItemScorer {
             return Results.newResultMap();
         }
 
-        // TODO rescale the user features into this vector
+        // rescale the user features into this vector
         // the ebeMultiply method will help you
-        RealVector nfeats;
+        RealVector weights = model.getFeatureWeights();
+        RealVector nfeats = userFeatures.ebeMultiply(weights);
 
-        // TODO Compute the predictions
-        
+        // Compute the predictions
+        RealVector predictions = model.getItemFeatureMatrix().transpose().preMultiply(nfeats);
 
         // Start with the baseline score for each user
         Long2DoubleMap scores = new Long2DoubleOpenHashMap(baselineScorer.score(user, items));
@@ -79,8 +81,11 @@ public class SVDItemScorer extends AbstractItemScorer {
             long item = e.getKey();
             int row = model.getItemRow(item);
             if (row >= 0) {
-                // TODO Set the scores
+                // Set the scores
                 // Since score vector has baselines, *add* the score to each value
+                double base = e.getValue();
+                double prediction = predictions.getEntry(row);
+                e.setValue(base + prediction);
             }
         }
 
