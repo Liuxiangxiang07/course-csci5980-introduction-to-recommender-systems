@@ -129,8 +129,13 @@ public class SVDModelBuilder implements Provider<SVDModel> {
 
                 Map<Long, Double> baselines = baselineScorer.score(user.getUserId(), ratings.keySet());
 
-                // TODO Populate this user's row wiht their ratings, minus the baseline scores
-                
+                // Populate this user's row wiht their ratings, minus the baseline scores
+                for (Map.Entry<Long, Double> e : ratings.entrySet()) {
+                    long item = e.getKey();
+                    int i = (int)itemMapping.get(item);
+                    double rating = e.getValue() - baselines.get(item);
+                    matrix.setEntry(u, i, rating);
+                }
             }
         } finally {
             users.close();
